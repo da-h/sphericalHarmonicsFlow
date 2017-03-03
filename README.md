@@ -7,7 +7,7 @@ Use spherical harmonics without the worries of the endless waiting for the recur
 &nbsp;
 
 ## Use
-Let **pts** be a 3-dimensional dataset having, where each point has some additional values **channels**.
+Let **pts** be a 3-dimensional dataset, where each point has some additional values (**channels**).
 &nbsp;
 
 ### Initialization
@@ -30,9 +30,9 @@ sh = SH(pts, center, channels, numcoeffs=4)
 ```
 **Attention!:** *This projects all points onto a single Sphere and approximates the values on the sphere*
 
-**Info:** All basis functions up to **numcoeffs=20** are precomputed stored in *sh_basis.pkl*. This file is loaded automatically. If you intend to use a higher number of basis functions, please consider to recompute this file before useage! (See *Auto-Saving Basis Functions*)
+**Info:** All basis functions up to **numcoeffs=20** are precomputed stored in *sh_basis.pkl*. This file is loaded automatically. If you intend to use a higher number of basis functions, please consider to recompute this file before useage!    
+(See *Auto-Saving Basis Functions*)
 &nbsp;
-
 
 ### Calculate representation graph (multiple Spheres)
 We define first a **radius** and a maximal number of spheres to observe **numshells**. Before approximating the channels all points are first projected onto their nearest sphere-shell.
@@ -75,7 +75,8 @@ Instead of feeding **pts** and **center** you can also use ```sh.x_proj``` ( *po
 &nbsp;
 
 ### Observable Variables
-Multiple Shell Mode *only*: **(M)**
+Multiple Shell Mode *only*: **(M)**  
+
 | Variable name | Function |
 | ---- | ---- |
 | ```sh.x_local``` | local coordinates **pts-center** |
@@ -100,7 +101,7 @@ Check what polynomials are used as the basis-functions.
 *(Under the assumption that the point with coordinates (```SH.x```,```SH.y```,```SH.z```) lies on the unit-sphere)*
 The polynomials are built and simplified using ```sympy```.
 ```python
-# (optional: load basis-functions)
+# (optional: load precomputed basis-functions)
 SH.loadBasis()
 
 # check a basis function
