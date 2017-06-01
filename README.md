@@ -6,6 +6,17 @@ Use spherical harmonics without the worries of the endless waiting for the recur
 &nbsp;
 &nbsp;
 
+### Install
+```python
+pip install -e git+gitlab:tensorflow/sphericalHarmonicsFlow#egg=SH
+```
+
+### Import
+```python
+from SH import *
+```
+
+
 ## Use
 Let **pts** be a 3-dimensional dataset, where each point has some additional values (**channels**).
 &nbsp;
