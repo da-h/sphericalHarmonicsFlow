@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='Spherical Harmonics for Tensorflow',
+    name='SphericalHarmonicsFlow',
     version='0.1.0',
     py_modules=['SH'],
     packages=find_packages(),

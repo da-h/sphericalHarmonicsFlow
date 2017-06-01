@@ -8,7 +8,7 @@ Use spherical harmonics without the worries of the endless waiting for the recur
 
 ### Install
 ```python
-pip install -e git+gitlab:tensorflow/sphericalHarmonicsFlow#egg=SH
+pip install -e git+gitlab:tensorflow/sphericalHarmonicsFlow#egg=SphericalHarmonicsFlow
 ```
 
 ### Import
