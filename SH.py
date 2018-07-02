@@ -101,14 +101,15 @@ class SH:
 
     # basis functions of spherical harmonics
     # (with projected coordinates)
-    def _basis(x,y,z, numcoeffs, suffix=""):
+    def _basis(x,y,z, max_degree, suffix=""):
+        max_degree += 1 # we start counting at 0
         with tf.name_scope("SH_basis_all"):
             with tf.name_scope("SH_basis"+suffix):
                 # -l ≤ m ≤ l
-                sh_basis_list = [ SH._basis_elem(l, m,x,y,z) for l in range(numcoeffs) for m in range(numcoeffs) if l*(l+1)+m<numcoeffs**2 and m <= l and m!=0 and l!=0 ]
-                sh_basis_list += [ SH._basis_elem(l,-m,x,y,z) for l in range(numcoeffs) for m in range(numcoeffs) if l*(l+1)+m<numcoeffs**2 and m <= l and m!=0 and l!=0 ]
+                sh_basis_list = [ SH._basis_elem(l,m,x,y,z) for l in range(max_degree) for m in range(-max_degree+1,max_degree) if l*(l+1)+abs(m)<max_degree**2 and abs(m) <= l and l!=0 ]
                 sh_basis_list = [ sh_basis_list[0]*0 + SH._basis_elem(0, 0,x,y,z) ] + sh_basis_list
-                return tf.stack(sh_basis_list, axis=1, name="sh_basis"+suffix)
+                basis_names = [ "B(l="+str(l)+",m="+str(m)+")" for l in range(max_degree) for m in range(-max_degree+1,max_degree) if l*(l+1)+abs(m)<max_degree**2 and abs(m) <= l ]
+                return tf.stack(sh_basis_list, axis=1, name="sh_basis"+suffix), basis_names
 
 
     # ------------------- #
@@ -123,15 +124,16 @@ class SH:
         if SH.sh_basis_file!=None and os.path.exists(SH.sh_basis_file+".pkl"):
             with open(SH.sh_basis_file+".pkl", "rb") as f:
                 SH._B_saved = pickle.load(f)
-    def prepareBasis(numcoeffs, verbose=False):
+    def prepareBasis(max_degree, verbose=False):
         SH.loadBasis()
+        max_degree += 1 # we start counting at 0
         if verbose:
-            numbasis = 1 + 2*np.sum([ 1 for l in range(numcoeffs) for m in range(numcoeffs) if l*(l+1)+m<numcoeffs**2 and m <= l and m!=0 and l!=0 ])
+            numbasis = 1 + 2*np.sum([ 1 for l in range(max_degree) for m in range(max_degree) if l*(l+1)+m<max_degree**2 and m <= l and m!=0 and l!=0 ])
             i = 1
             print("Preparing Basis "+str(i)+" of "+str(numbasis)+" ( "+str(i/numbasis)*100+" % )",end="")
-            for m in range(numcoeffs):
-                for l in range(numcoeffs):
-                    if l*(l+1)+m<numcoeffs**2 and m<=l and m!=0 and l!=0:
+            for m in range(max_degree):
+                for l in range(max_degree):
+                    if l*(l+1)+m<max_degree**2 and m<=l and m!=0 and l!=0:
                         i+=1
                         print("\rPreparing Basis "+str(i)+" of "+str(numbasis)+" ( "+str(i/numbasis)+" % )",end="")
                         SH._basis_elem_sympy(l, m)
@@ -140,7 +142,7 @@ class SH:
                         SH._basis_elem_sympy(l,-m)
         else:
             SH._basis_elem_sympy(0,0)
-            [ (SH._basis_elem_sympy(l, m), SH._basis_elem_sympy(l,-m)) for l in range(numcoeffs) for m in range(numcoeffs) if l*(l+1)+m<numcoeffs**2 and m <= l and m!=0 and l!=0 ]
+            [ (SH._basis_elem_sympy(l, m), SH._basis_elem_sympy(l,-m)) for l in range(max_degree) for m in range(max_degree) if l*(l+1)+m<max_degree**2 and m <= l and m!=0 and l!=0 ]
         SH.saveBasis()
 
 
@@ -168,14 +170,14 @@ class SH:
 
 
 
-    def __init__(self, pts, center, channels, numcoeffs=10, numshells=0, radius=1, inv_eps=0.00001, autosave=True):
-        self.numcoeffs = numcoeffs
+    def __init__(self, pts, center, channels, max_degree=10, numshells=0, radius=1, inv_eps=0.00001, autosave=True):
+        self.max_degree = max_degree
         self.numshells = numshells
         self.inv_eps = inv_eps
         numchannels = channels.get_shape().as_list()[1]
 
         if autosave:
-            SH.prepareBasis(numcoeffs)
+            SH.prepareBasis(max_degree)
 
 
 
@@ -215,19 +217,19 @@ class SH:
             # build basis and approximate this subset
             SH.printfunc("building coeffs ... (general): ", end="")
             with tf.name_scope("sh_coeffs"):
-                basis = SH._basis(self.x_proj[:,0],self.x_proj[:,1],self.x_proj[:,2],numcoeffs)
-                coeffs = self.approximate(self.x_proj, basis, channels)
+                self.basis, self.basis_names = SH._basis(self.x_proj[:,0],self.x_proj[:,1],self.x_proj[:,2],max_degree)
+                coeffs = self.approximate(self.x_proj, self.basis, channels)
             self.coeffs = tf.stack([coeffs])
             SH.printfunc("done.")
 
 
             # use coefficients of approximation to redefine function
-            self.numbasis = basis.get_shape().as_list()[1]
+            self.numbasis = self.basis.get_shape().as_list()[1]
             self.coeffs_input = tf.placeholder(tf.float32, shape=(self.numbasis,numchannels), name="coeffs_input")
             with tf.name_scope("SH_approx_fn"):
 
                 # remerge coeffs into function
-                self.approx_func = tf.stack([tf.matmul(basis, self.coeffs_input, name="shell_fn")])
+                self.approx_func = tf.stack([tf.matmul(self.basis, self.coeffs_input, name="shell_fn")])
 
 
         # --------------- #
@@ -237,7 +239,7 @@ class SH:
         # project all shells seperately
         if numshells>0:
             coeffs = []
-            basis = []
+            self.basis, self.basis_names = [], []
 
             # helper to get points, that lies on one of the shells
             # (only used for approx_func)
@@ -260,25 +262,26 @@ class SH:
 
                 # build basis and approximate this subset
                 with tf.name_scope("sh_coeffs"):
-                    s_basis = SH._basis(xs_proj[:,0],xs_proj[:,1],xs_proj[:,2],numcoeffs)
+                    s_basis, s_basis_names = SH._basis(xs_proj[:,0],xs_proj[:,1],xs_proj[:,2],max_degree)
                     s_coeffs = self.approximate(xs_proj, s_basis, xs_channels)
 
                 coeffs.append(s_coeffs)
-                basis.append(s_basis)
+                self.basis.append(s_basis)
+                self.basis_names.append(s_basis_names)
             SH.printfunc("\rbuilding coeffs ... done.")
 
             # stack to coeff-cubus
             self.coeffs = tf.stack(coeffs)
-            basis = tf.stack(basis)
+            self.basis = tf.stack(self.basis)
 
 
             # use coefficients of approximation to redefine function
-            self.numbasis = basis.get_shape().as_list()[2]
+            self.numbasis = self.basis.get_shape().as_list()[2]
             self.coeffs_input = tf.placeholder(tf.float32, shape=(numshells,self.numbasis,numchannels), name="coeffs_input")
             with tf.name_scope("SH_approx_fn"):
 
                 # remerge coeffs into function
-                self.approx_func = tf.matmul(basis, coeffs, name="approx_fn_shells")
+                self.approx_func = tf.matmul(self.basis, coeffs, name="approx_fn_shells")
 
 
         if autosave:

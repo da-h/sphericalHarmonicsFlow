@@ -33,23 +33,23 @@ channels = tf.placeholder(tf.float32, shape=[None, numchannels])
 &nbsp;
 
 ### Calculate representation graph (single Sphere)
-Approximate the centered points (**pts-center**) with values (**channels**) by a spherical harmonics basis with about **numcoeffs²** basis-elements.
+Approximate the centered points (**pts-center**) with values (**channels**) by a spherical harmonics basis with about **max_degree²** basis-elements.
 
-```python  
+```python
 # express pts as spherical harmonics basis approximating channels
-sh = SH(pts, center, channels, numcoeffs=4)
+sh = SH(pts, center, channels, max_degree=4)
 ```
 **Attention!:** *This projects all points onto a single Sphere and approximates the values on the sphere*
 
-**Info:** All basis functions up to **numcoeffs=20** are precomputed stored in *sh_basis.pkl*. This file is loaded automatically. If you intend to use a higher number of basis functions, please consider to recompute this file before useage!    
+**Info:** All basis functions up to **max_degree=20** are precomputed stored in *sh_basis.pkl*. This file is loaded automatically. If you intend to use a higher number of basis functions, please consider to recompute this file before useage!
 (See *Auto-Saving Basis Functions*)
 &nbsp;
 
 ### Calculate representation graph (multiple Spheres)
 We define first a **radius** and a maximal number of spheres to observe **numshells**. Before approximating the channels all points are first projected onto their nearest sphere-shell.
 
-```python  
-sh = SH(pts, center, channels, numcoeffs=4, numshells=10, radius=0.1)
+```python
+sh = SH(pts, center, channels, max_degree=4, numshells=10, radius=0.1)
 ```
 &nbsp;
 
@@ -96,6 +96,8 @@ Multiple Shell Mode *only*: **(M)**
 | ```sh.x_theta``` | angle on unit sphere |
 | ```sh.x_phi``` | angle on unit sphere |
 | ```sh.numbasis``` | Size of Basis (Non-Tensor) |
+| ```sh.basis_names``` | basis names in format "B(l=2,m=3)" |
+| ```sh.basis``` | raw result of basis functions |
 | ```sh.coeffs``` | coefficients for basis-functions |
 | &nbsp;&nbsp;&nbsp; .shape | [#basis, #channels] |
 | &nbsp;&nbsp;&nbsp; .shape **(M)** | [#shells, #basis, #channels] |
@@ -134,7 +136,7 @@ SH(..., inv_eps=1e-10 )
 
 
 ### Auto-Saving Basis-Functions
-The spherical harmonics basis takes some while to compute (especially for a larger basis-size). We have precomputed all functions up to **numcoeffs=20**. They are stored in *sh_basis.pkl*. This file is loaded automatically on the first call of *SH(...)*.
+The spherical harmonics basis takes some while to compute (especially for a larger basis-size). We have precomputed all functions up to **max_degree=20**. They are stored in *sh_basis.pkl*. This file is loaded automatically on the first call of *SH(...)*.
 &nbsp;
 
 #### Disable Auto-Loading / -Saving of the Basis
